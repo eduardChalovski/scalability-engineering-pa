@@ -7,6 +7,8 @@ from src.config import postgres_config
 from langchain_postgres import PGEngine, PGVectorStore
 from src.config import postgres_config, vector_store_config
 
+from pathlib import Path
+
 
 def load_pdf_pages(file_path: str) -> list[Document]:
     reader = pypdf.PdfReader(file_path)
@@ -17,6 +19,30 @@ def load_pdf_pages(file_path: str) -> list[Document]:
         )
         for i, page in enumerate(reader.pages)
     ]
+
+
+def get_all_pdf_names(directory_name="books_for_semantic_search"):
+    """
+    Iterates over files in directory_name and returns pdf names.
+
+    Args:
+        directory_name:     Name of the directory to search for pdfs.
+
+    Returns:
+        pdf_names:          List of pdf file names.
+
+    Raises:
+        KeyError: Right now doesn't raise any exceptions. TODO: introduce some checks
+    """
+    my_path = Path(directory_name)
+
+    pdf_names = [
+        str(file)
+        for file in my_path.iterdir()
+        if file.is_file() and file.name.endswith(".pdf")
+    ]
+
+    return pdf_names
 
 
 def table_exists(
