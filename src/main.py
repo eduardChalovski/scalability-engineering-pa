@@ -9,65 +9,40 @@ from langchain_core.documents import Document
 from langchain_huggingface import HuggingFaceEmbeddings
 # from langchain_postgres import PGVector   # old version of PGVector
 
-from src.db_utils import table_exists, load_pdf_pages, establish_vectore_store_connection
+from src.utils import table_exists, load_pdf_pages, establish_vector_store_connection, get_all_pdf_names, init_vector_store
+embeddings = HuggingFaceEmbeddings(                             # TODO: consider using gemini 
+    # TODO: how can we load the model as one of the files to avoid reloading it form HuggingFace?
+    model_name="sentence-transformers/all-mpnet-base-v2",       # TODO: consider using other models?
+    encode_kwargs={"normalize_embeddings": True},
+)
 
+def get_snippets(query, embeddings=embeddings, k=5,):
+    pg_engine, vector_store = establish_vector_store_connection(embeddings)
+    results = vector_store.similarity_search_with_score(query, k=k)
+    for r in results:
+        doc, score = r
+        print(f"Score: {score}\n")
+        print(doc)
+    return results
+    
 def main():
     # Some code is adapted from 
     # https://docs.langchain.com/oss/python/langchain/knowledge-base#huggingface
 
     # TODO: Do we want to have Langsmith?
 
-    embeddings = HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-mpnet-base-v2",       # TODO: consider using other models?
-        encode_kwargs={"normalize_embeddings": True},
-    )
+    # To load all books run this
+    # init_vector_store(embeddings=embeddings)
 
-    documents = [
-        Document(
-            page_content="Dogs are great companions, known for their loyalty and friendliness.",
-            metadata={"source": "mammal-pets-doc"},
-        ),
-        Document(
-            page_content="Cats are independent pets that often enjoy their own space.",
-            metadata={"source": "mammal-pets-doc"},
-        ),
-    ]
+    # To connect run this
+    pg_engine, vector_store = establish_vector_store_connection(embeddings)
+    results = vector_store.similarity_search_with_score("How to prevent overload?", k=5)
+    for r in results:
+        doc, score = r
+        print(f"Score: {score}\n")
+        print(doc)
 
-    vector_1 = embeddings.embed_query(documents[0].page_content)
-    vector_2 = embeddings.embed_query(documents[1].page_content)
 
-    assert len(vector_1) == len(vector_2)
-    print(f"Generated vectors of length {len(vector_1)}\n")
-    print(vector_1[:10])
-    
-    # How to set up the connection to the postgresdb
-    # Python running on Windows       -> use localhost
-    # Python running in Docker Compose -> use postgres
-    # pgAdmin running in Docker        -> use postgres
-    # psql from Windows                -> use localhost
-
-    # CONNECTION_STRING = postgres_config.langchain_connection_string
-    # COLLECTION_NAME = "my_docs"
-    # VECTOR_TABLE_NAME = vector_store_config.table_name
-    # VECTOR_SIZE=vector_store_config.vectore_size
-
-    # Establish connection to the vectore store.
-    pg_engine, vectore_store = establish_vectore_store_connection(embeddings)
-
-    
-    # file_path = "../example_data/nke-10k-2023.pdf"
-    file_path = "./books_for_semantic_search/Distributed_Systems_4.pdf"
-    
-    docs = load_pdf_pages(file_path)
-    print("pages added : ", len(docs))
-
-    # Old working version, apparently PGVectorStore is the new gen of PGVector
-    # vector_store = PGVector(
-    #     embeddings=embeddings,
-    #     collection_name="my_docs",
-    #     connection="postgresql+psycopg://postgres:postgres@localhost:5432/tutorial",
-    # )
-    
     print("Hello from scalable-books-search!")
 
 
