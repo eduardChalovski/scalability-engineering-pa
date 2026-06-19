@@ -7,7 +7,7 @@ from src.config import postgres_config
 from langchain_postgres import PGEngine, PGVectorStore
 from src.config import postgres_config, vector_store_config
 
-# Below is a minimal helper for demonstration purposes.
+
 def load_pdf_pages(file_path: str) -> list[Document]:
     reader = pypdf.PdfReader(file_path)
     return [
@@ -17,6 +17,7 @@ def load_pdf_pages(file_path: str) -> list[Document]:
         )
         for i, page in enumerate(reader.pages)
     ]
+
 
 def table_exists(
     table_name: str,
@@ -44,7 +45,7 @@ def establish_vectore_store_connection(embeddings):
         vector_store:   Postgres Vector Store instance.
 
     Raises:
-        KeyError: Raises an exception.
+        KeyError: Right now doesn't raise any exceptions. TODO: introduce some checks
     """
     
     pg_engine = PGEngine.from_connection_string(
