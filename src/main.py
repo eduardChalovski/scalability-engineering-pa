@@ -8,9 +8,8 @@ if sys.platform == "win32":
 from langchain_core.documents import Document
 from langchain_huggingface import HuggingFaceEmbeddings
 # from langchain_postgres import PGVector   # old version of PGVector
-from langchain_postgres import PGEngine, PGVectorStore
-from src.config import postgres_config, vector_store_config
-from src.db_utils import table_exists, load_pdf_pages
+
+from src.db_utils import table_exists, load_pdf_pages, establish_vectore_store_connection
 
 def main():
     # Some code is adapted from 
@@ -52,32 +51,15 @@ def main():
     # VECTOR_TABLE_NAME = vector_store_config.table_name
     # VECTOR_SIZE=vector_store_config.vectore_size
 
-    pg_engine = PGEngine.from_connection_string(
-        url=postgres_config.langchain_connection_string
-    )
-
-    if not table_exists(vector_store_config.table_name):
-        print(f"Creating vector table: {vector_store_config.table_name}")
-
-        pg_engine.init_vectorstore_table(
-            table_name=vector_store_config.table_name,
-            vector_size=vector_store_config.vector_size,
-        )
-    else:
-        print(f"Vector table already exists: {vector_store_config.table_name}")
-
-    vector_store = PGVectorStore.create_sync(
-        engine=pg_engine,
-        table_name=vector_store_config.table_name,
-        embedding_service=embeddings
-    )
+    # Establish connection to the vectore store.
+    pg_engine, vectore_store = establish_vectore_store_connection(embeddings)
 
     
     # file_path = "../example_data/nke-10k-2023.pdf"
     file_path = "./books_for_semantic_search/Distributed_Systems_4.pdf"
     
     docs = load_pdf_pages(file_path)
-    print("books added : ", len(docs))
+    print("pages added : ", len(docs))
 
     # Old working version, apparently PGVectorStore is the new gen of PGVector
     # vector_store = PGVector(
