@@ -10,6 +10,11 @@ load_dotenv()
 
 @dataclass(frozen=True)
 class PostgresConfig:
+    # How to set up the connection to the postgresdb
+    # Python running on Windows       -> use localhost
+    # Python running in Docker Compose -> use postgres
+    # pgAdmin running in Docker        -> use postgres
+    # psql from Windows                -> use localhost
     host: str = os.getenv("POSTGRES_HOST", "localhost")
     port: int = int(os.getenv("POSTGRES_PORT", "5432"))
     user: str = os.getenv("POSTGRES_USER", "postgres")
