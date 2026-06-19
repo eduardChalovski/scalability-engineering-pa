@@ -9,6 +9,28 @@ from src.config import postgres_config, vector_store_config
 
 from pathlib import Path
 
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+# Some code is adapted from 
+# https://docs.langchain.com/oss/python/langchain/knowledge-base#huggingface
+
+from langchain_core.documents import Document
+
+def clean_text(text: str) -> str:
+    return (
+        text
+        .replace("\x00", "")
+        .replace("\ufeff", "")
+        .strip()
+    )
+
+
+def clean_document(document: Document) -> Document:
+    return Document(
+        page_content=clean_text(document.page_content),
+        metadata=document.metadata,
+    )
+
 
 def load_pdf_pages(file_path: str) -> list[Document]:
     reader = pypdf.PdfReader(file_path)
@@ -59,7 +81,7 @@ def table_exists(
             return bool(result[0])
         
 
-def establish_vectore_store_connection(embeddings):
+def establish_vector_store_connection(embeddings):
     """
     Establish connection with the PostgreSQL docker container. Creates the vectore store if it doesn't exist.
 
@@ -95,3 +117,31 @@ def establish_vectore_store_connection(embeddings):
     )
 
     return pg_engine, vector_store
+
+def init_vector_store(embeddings, directory_name: str = None):
+    # Establish connection to the vectore store.
+    pg_engine, vector_store = establish_vector_store_connection(embeddings)
+
+    if directory_name is None:
+        pdfs_file_paths = get_all_pdf_names()
+    else:
+        pdfs_file_paths = get_all_pdf_names(directory_name)
+
+    docs = []
+
+    for pdf_path in pdfs_file_paths:
+        loaded_pages = load_pdf_pages(pdf_path)
+        cleaned_pages = [clean_document(doc) for doc in loaded_pages]
+        docs.extend(cleaned_pages)
+
+    print("pages added : ", len(docs))
+
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=1000, chunk_overlap=200, add_start_index=True
+    )
+    all_splits = text_splitter.split_documents(docs)
+
+    ids = vector_store.add_documents(documents=all_splits)
+
+
+    print("splits from the pages added: ", len(all_splits))
